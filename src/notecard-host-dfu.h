@@ -82,6 +82,9 @@ bool dfuSetup(const DFUConfig& config = DFUConfig());
  */
 uint32_t dfuPoll(bool force=false);
 
+bool dfuUpdateInProgress();
+
+
 // org name is optional
 #ifndef PRODUCT_ORG_NAME
 #define PRODUCT_ORG_NAME ""

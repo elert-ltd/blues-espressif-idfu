@@ -26,75 +26,98 @@ class DFU
     /**
      * @brief In-application DFU updates are not available.
      */
-    UNAVAILABLE,
+    UNAVAILABLE = 0,
 
     /**
      * @brief The initial state.
      */
-    INITIAL,
+    INITIAL = 1,
 
     /**
      * @brief Report the current version to Notehub.
      * Transitions to CHECK_DFU_READY once the current firmware version has been sent to Notehub.
      */
-    REPORT_CURRENT_VERSION,
+    REPORT_CURRENT_VERSION = 2,
 
     /**
      * @brief Query the notecard for an available DFU image.
      */
-    CHECK_DFU_AVAILABLE,
+    CHECK_DFU_AVAILABLE = 3,
 
     /**
      * @brief DFU image is available.
      * Sends a notification to the app, or automatically transitions to REQUEST_DFU_MODE.
      */
-    DFU_AVAILABLE,
+    DFU_AVAILABLE = 4,
 
     /**
      * @brief Request that the Notecard enters DFU mode.
      */
-    REQUEST_DFU_MODE,
+    REQUEST_DFU_MODE = 5,
 
     /**
      * @brief Check that the Notecard has entered DFU mode.
      */
-    CHECK_DFU_MODE,
+    CHECK_DFU_MODE = 6,
 
     /**
      * @brief Prepare the device to receive the firmware image.
      */
-    BEGIN_UPDATE,
+    BEGIN_UPDATE = 7,
 
     /**
      * @brief Retrieve a chunk of the firmware image and check integrity.
      */
-    RETRIEVE_CHUNK,
+    RETRIEVE_CHUNK = 8,
 
     /**
      * @brief Store the retrieved chunk to the host's memory.
      */
-    STORE_CHUNK,
+    STORE_CHUNK = 9,
 
     /**
      * @brief When all chunks have been received
      */
-    FINALIZE_TRANSFER,
+    FINALIZE_TRANSFER = 10,
 
     /**
      * @brief Instructs the Notecard to leave DFU mode and resume the previous mode.
      */
-    LEAVE_DFU_MODE,
+    LEAVE_DFU_MODE = 11,
 
     /**
      * @brief Remove the DFU image stored on the Notecard.
      */
-    DELETE_DFU_IMAGE,
+    DELETE_DFU_IMAGE = 12,
 
     /**
      * @brief Causes the downloaded image to be executed.
      */
-    EXECUTE_IMAGE
+    EXECUTE_IMAGE = 13
   };
+
+  static const char* state_to_string(State state) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic error "-Wswitch-enum"
+    switch (state) {
+      case State::UNAVAILABLE: return "no update available";
+      case State::INITIAL: return "initial";
+      case State::REPORT_CURRENT_VERSION: return "report version";
+      case State::CHECK_DFU_AVAILABLE: return "check update available";
+      case State::DFU_AVAILABLE: return "update available";
+      case State::REQUEST_DFU_MODE: return "enter DFU mode";
+      case State::CHECK_DFU_MODE: return "verify DFU mode";
+      case State::BEGIN_UPDATE: return "begin firmware update";
+      case State::RETRIEVE_CHUNK: return "fetch firmware chunk";
+      case State::STORE_CHUNK: return "store firmware chunk";
+      case State::FINALIZE_TRANSFER: return "finalize firmware transfer";
+      case State::LEAVE_DFU_MODE: return "leave DFU mode";
+      case State::DELETE_DFU_IMAGE: return "delete Notecard DFU image";
+      case State::EXECUTE_IMAGE: return "apply new firmware";
+    }
+#pragma GCC diagnostic pop
+    return "unknown";  // why is this needed? the compiler should see all enum values are present
+  }
 
   /**
    * @brief The current state the DFU process is in.
@@ -218,7 +241,7 @@ public:
       return remaining;
     }
     newState = false;
-    notecard.logDebugf("dfu: running state %d\n", state);
+    notecard.logDebugf("dfu: running state %d: %s\n", state, state_to_string(state));
     runState();
 
     remaining = next.remaining();
@@ -228,6 +251,10 @@ public:
     }
     notecard.logDebugf("poll %d\n", remaining);
     return uint32_t(remaining);
+  }
+
+  bool isUpdateInProgress() {
+    return state!=State::INITIAL || state!=State::UNAVAILABLE;
   }
 
 private:
@@ -414,7 +441,7 @@ private:
     case State::STORE_CHUNK:
       if (storeChunk())
       {
-        if (isUpdateComplete())
+        if (isTransferComplete())
         {
           transitionTo(State::FINALIZE_TRANSFER);
         }
@@ -430,8 +457,10 @@ private:
       break;
 
     case State::FINALIZE_TRANSFER:
-      if (validateImage() && activateImage())
+      if (validateImage())
       {
+        // a bad image cannot be applied
+        activateImage();
         imageTransferred = true;
         discardDFUImage = true;
       }
@@ -646,7 +675,7 @@ private:
     return true;
   }
 
-  bool isUpdateComplete()
+  bool isTransferComplete()
   {
     return imageLength && offset == imageLength;
   }
@@ -823,3 +852,6 @@ uint32_t dfuPoll(bool force)
   return dfu().poll(force);
 }
 
+bool dfuUpdateInProgress() {
+  return dfu().isUpdateInProgress();
+}
