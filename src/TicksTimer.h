@@ -62,4 +62,16 @@ struct ArduinoTicksTimer: public TicksTimer {
     inline int32_t remaining() {
         return TicksTimer::remaining(millis());
     }
+
+    inline void reset() {
+        TicksTimer::reset(millis());
+    }
+
+    /**
+     * @brief Causes this timer to fire next time hasElapsed is called.
+     * 
+     */
+    inline void elapse() {
+        TicksTimer::set(millis()-duration, duration);
+    }
 };
