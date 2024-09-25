@@ -43,7 +43,7 @@ class DFU
      * @brief Query the notecard for an available DFU image.
      */
     CHECK_DFU_AVAILABLE = 3,
-
+  
     /**
      * @brief DFU image is available.
      * Sends a notification to the app, or automatically transitions to REQUEST_DFU_MODE.
@@ -254,7 +254,7 @@ public:
   }
 
   bool isUpdateInProgress() {
-    return state!=State::INITIAL || state!=State::UNAVAILABLE;
+    return state>=State::CHECK_DFU_MODE;
   }
 
 private:
