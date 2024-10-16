@@ -254,7 +254,7 @@ public:
   }
 
   bool isUpdateInProgress() {
-    return state>=State::CHECK_DFU_MODE;
+    return state>=State::DFU_AVAILABLE;
   }
 
 private:
