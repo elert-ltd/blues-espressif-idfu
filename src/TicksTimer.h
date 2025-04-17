@@ -23,7 +23,7 @@ struct TicksTimer {
     }
 
     inline bool hasElapsed(ticks_t current_ticks, bool reset=false) {
-        bool elapsed = (current_ticks-start_time)>duration;
+        bool elapsed = (current_ticks-start_time)>=duration;
         if (elapsed && reset) {
             this->reset(current_ticks);
         }
@@ -70,7 +70,6 @@ struct ArduinoTicksTimer: public TicksTimer {
 
     /**
      * @brief Causes this timer to fire next time hasElapsed is called.
-     * 
      */
     inline void elapse() {
         TicksTimer::set(millis()-duration, duration);
