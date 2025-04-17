@@ -257,6 +257,11 @@ public:
     return state>=State::DFU_AVAILABLE;
   }
 
+  // todo - the host should be able to hold off on the reset until a suitable time.
+  bool isAboutToReset() {
+    return state==State::EXECUTE_IMAGE;
+  }
+
 private:
   /**
    * @brief Retries the current state, or transitions to the given state when the number of retries or timeout has been reached.
@@ -508,7 +513,7 @@ private:
    */
   bool cancelOutboardDFU() {
     J *req = notecard.newRequest("card.dfu");
-    JAddStringToObject(req, "name", "-");
+    JAddStringToObject(req, "name", "esp32");
     JAddBoolToObject(req, "off", true);
     return notecard.sendRequest(req);
   }
@@ -534,8 +539,20 @@ private:
     J *req = notecard.newRequest("dfu.status");
     if (req != NULL)
     {
-      JAddStringToObject(req, "version", firmwareVersion());
-      notecard.sendRequest(req);
+      J* rsp = notecard.requestAndResponse(req);
+      req = nullptr;
+      const char* version = JGetString(rsp, "version");
+      bool fwSame = false;
+      if (version && !strcmp(version, firmwareVersion())) {
+        fwSame = true;
+      }
+      JDelete(rsp);
+
+      if (!fwSame) {
+        req = notecard.newRequest("dfu.status");
+        JAddStringToObject(req, "version", firmwareVersion());
+        notecard.sendRequest(req);
+      }
     }
     return req;
   }
