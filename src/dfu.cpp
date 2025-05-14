@@ -253,8 +253,12 @@ public:
     return uint32_t(remaining);
   }
 
-  bool isUpdateInProgress() {
+  bool isUpdateInProgress() const {
     return state>=State::DFU_AVAILABLE;
+  }
+
+  bool isImageTransferred() const {
+    return imageTransferred;
   }
 
   // todo - the host should be able to hold off on the reset until a suitable time.
@@ -465,8 +469,9 @@ private:
       if (validateImage())
       {
         // a bad image cannot be applied
-        activateImage();
-        imageTransferred = true;
+        if (activateImage()) {
+          imageTransferred = true;
+        }
         discardDFUImage = true;
       }
       transitionTo(State::LEAVE_DFU_MODE);
@@ -560,6 +565,11 @@ private:
     return success;
   }
 
+  bool stringEndsWith(const char* haystack, const char* needle) {
+    return haystack && needle && (strlen(haystack) > strlen(needle) && !strcmp(haystack + strlen(haystack) - strlen(needle), needle));
+  }
+
+
   /**
    * @brief Determines whether the Notecard has a DFU image available.
    *
@@ -574,12 +584,15 @@ private:
 
     // Check status, and determine both if there is an image ready, and if the image is NEW.
     J *rsp = notecard.requestAndResponse(notecard.newRequest("dfu.status"));
-    if (rsp && strcmp(JGetString(rsp, "mode"), "outboard-ready") == 0) {
-      // remnant from ODFU being used. Delete the firmware
+    J* body = JGetObject(rsp, "body");
+    const char* name = JGetString(body, "name");
+    const char* mode = JGetString(rsp, "mode");
+
+    bool downloadReady = rsp && (!strcmp(mode, "ready") || !strcmp(mode, "outboard-ready"));
+    if (downloadReady && !stringEndsWith(name, ".bin")) {
       enableInboardDFU(true, true);
     }
-
-    if (rsp && strcmp(JGetString(rsp, "mode"), "ready") == 0)
+    if (downloadReady)
     {
       notecard.logDebug("dfu: image is ready.\n");
       imageIsReady = true;
@@ -840,6 +853,10 @@ private:
     updater.executeImage();
     return true;
   }
+
+  bool dfuImageTransferred() const {
+    return imageTransferred;
+  }
 };
 
 
@@ -874,4 +891,8 @@ uint32_t dfuPoll(bool force)
 
 bool dfuUpdateInProgress() {
   return dfu().isUpdateInProgress();
+}
+
+bool dfuImageTransferred() {
+  return dfu().isImageTransferred();
 }

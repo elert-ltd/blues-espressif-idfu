@@ -82,8 +82,14 @@ bool dfuSetup(const DFUConfig& config = DFUConfig());
  */
 uint32_t dfuPoll(bool force=false);
 
+/**
+ * @brief Determine if an update is in progress. Once this returns true, the result of dfuImageTransferred() is valid.
+ * 
+ * @return true 
+ * @return false 
+ */
 bool dfuUpdateInProgress();
-
+bool dfuImageTransferred();
 
 // org name is optional
 #ifndef PRODUCT_ORG_NAME
