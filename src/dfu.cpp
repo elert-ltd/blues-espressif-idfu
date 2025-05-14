@@ -537,10 +537,10 @@ private:
   {
     // register the current firmware version with notehub
     J *req = notecard.newRequest("dfu.status");
+    bool success = false;
     if (req != NULL)
     {
       J* rsp = notecard.requestAndResponse(req);
-      req = nullptr;
       const char* version = JGetString(rsp, "version");
       bool fwSame = false;
       if (version && !strcmp(version, firmwareVersion())) {
@@ -551,10 +551,13 @@ private:
       if (!fwSame) {
         req = notecard.newRequest("dfu.status");
         JAddStringToObject(req, "version", firmwareVersion());
-        notecard.sendRequest(req);
+        success = notecard.sendRequest(req);
+      }
+      else {
+        success = true;
       }
     }
-    return req;
+    return success;
   }
 
   /**
