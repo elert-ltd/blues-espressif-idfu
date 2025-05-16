@@ -364,12 +364,7 @@ private:
     switch (state)
     {
     case State::INITIAL:
-      if (cancelOutboardDFU()) {
-        transitionTo(State::REPORT_CURRENT_VERSION);
-      }
-      else {
-        retry(State::INITIAL);
-      }
+      transitionTo(State::REPORT_CURRENT_VERSION);
       break;
 
     case State::REPORT_CURRENT_VERSION:
@@ -516,10 +511,10 @@ private:
    * @return true   The request was successfully sent.
    * @return false  The request was not sent and should be retried.
    */
-  bool cancelOutboardDFU() {
+  bool enableOutboardDFU(bool enable) {
     J *req = notecard.newRequest("card.dfu");
     JAddStringToObject(req, "name", "esp32");
-    JAddBoolToObject(req, "off", true);
+    JAddBoolToObject(req, enable ? "on" : "off", true);
     return notecard.sendRequest(req);
   }
 
@@ -854,9 +849,6 @@ private:
     return true;
   }
 
-  bool dfuImageTransferred() const {
-    return imageTransferred;
-  }
 };
 
 
